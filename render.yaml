@@ -2,7 +2,7 @@
 # https://render.com/docs/blueprint-spec
 #
 # The web service runs the OAuth proxy over Streamable HTTP at /mcp. OAuth
-# state is stored in a private Render Key Value (Redis-compatible) instance so
+# state is stored in an existing private Render Key Value (Redis) instance so
 # client registrations and tokens survive restarts and redeploys.
 
 services:
@@ -40,17 +40,8 @@ services:
         generateValue: true
       - key: GOOGLE_ADS_MCP_STORAGE_TYPE
         value: redis
+      # Internal URL of an existing Key Value instance, including a dedicated
+      # database index (e.g. redis://<user>:<password>@<host>:6379/4). It holds
+      # a password, so it is entered in the dashboard and never committed.
       - key: GOOGLE_ADS_MCP_STORAGE_REDIS_URL
-        fromService:
-          type: keyvalue
-          name: google-ads-mcp-oauth
-          property: connectionString
-
-  - type: keyvalue
-    name: google-ads-mcp-oauth
-    plan: free
-    region: frankfurt
-    # OAuth tokens must never be evicted to make room for other keys.
-    maxmemoryPolicy: noeviction
-    # Only reachable from services on the private Render network.
-    ipAllowList: []
+        sync: false
