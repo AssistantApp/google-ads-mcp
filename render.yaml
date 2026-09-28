@@ -24,8 +24,10 @@ services:
         sync: false
       - key: GOOGLE_ADS_MCP_OAUTH_CLIENT_SECRET
         sync: false
-      - key: GOOGLE_ADS_DEVELOPER_TOKEN
-        sync: false
+      # No developer token: since 2026-09-09 API access levels come from the
+      # Cloud project that owns the OAuth client above.
+      # Optional: set only when reaching client accounts through a manager
+      # account; the per-call login_customer_id parameter overrides it.
       - key: GOOGLE_ADS_LOGIN_CUSTOMER_ID
         sync: false
       # Leave unset to use the onrender.com URL (RENDER_EXTERNAL_URL). Set it
