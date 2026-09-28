@@ -13,8 +13,12 @@ COPY . .
 # Install the project and its dependencies
 # We use --system to install into the system Python environment in the container
 # EXTRAS selects optional storage backends, e.g. "redis" or "redis,firestore".
+# FastMCP is pinned to the version the OAuth workaround below was verified
+# against; pyproject's ">=" range would otherwise pull a newer release.
 ARG EXTRAS=""
-RUN if [ -n "$EXTRAS" ]; then uv pip install --system ".[$EXTRAS]"; else uv pip install --system .; fi
+ARG FASTMCP_VERSION="4.0.3"
+RUN if [ -n "$EXTRAS" ]; then target=".[$EXTRAS]"; else target="."; fi; \
+    uv pip install --system "$target" "fastmcp==$FASTMCP_VERSION"
 
 # Codex CLI 0.146 reports the RFC 9207 `iss` value as missing from the local
 # OAuth callback, even though FastMCP constructs the redirect with `iss` and
