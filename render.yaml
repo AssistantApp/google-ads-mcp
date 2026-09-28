@@ -1,0 +1,54 @@
+# Render Blueprint for the Google Ads MCP server.
+# https://render.com/docs/blueprint-spec
+#
+# The web service runs the OAuth proxy over Streamable HTTP at /mcp. OAuth
+# state is stored in a private Render Key Value (Redis-compatible) instance so
+# client registrations and tokens survive restarts and redeploys.
+
+services:
+  - type: web
+    name: google-ads-mcp
+    runtime: docker
+    # The free plan spins down when idle; the resulting cold starts make MCP
+    # clients time out during the OAuth flow.
+    plan: starter
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    envVars:
+      # Render passes environment variables to the Docker build as build args.
+      - key: EXTRAS
+        value: redis
+      - key: GOOGLE_ADS_MCP_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_ADS_MCP_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_ADS_DEVELOPER_TOKEN
+        sync: false
+      - key: GOOGLE_ADS_LOGIN_CUSTOMER_ID
+        sync: false
+      # Leave unset to use the onrender.com URL (RENDER_EXTERNAL_URL). Set it
+      # when serving the MCP endpoint from a custom domain.
+      - key: GOOGLE_ADS_MCP_BASE_URL
+        sync: false
+      - key: GOOGLE_ADS_MCP_JWT_SIGNING_KEY
+        generateValue: true
+      - key: GOOGLE_ADS_MCP_STORAGE_ENCRYPTION_KEY
+        generateValue: true
+      - key: GOOGLE_ADS_MCP_STORAGE_TYPE
+        value: redis
+      - key: GOOGLE_ADS_MCP_STORAGE_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: google-ads-mcp-oauth
+          property: connectionString
+
+  - type: keyvalue
+    name: google-ads-mcp-oauth
+    plan: free
+    region: frankfurt
+    # OAuth tokens must never be evicted to make room for other keys.
+    maxmemoryPolicy: noeviction
+    # Only reachable from services on the private Render network.
+    ipAllowList: []

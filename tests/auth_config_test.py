@@ -67,6 +67,7 @@ class TestAuthConfig(unittest.TestCase):
             "GOOGLE_ADS_MCP_OAUTH_CLIENT_ID",
             "GOOGLE_ADS_MCP_OAUTH_CLIENT_SECRET",
             "GOOGLE_ADS_MCP_BASE_URL",
+            "RENDER_EXTERNAL_URL",
         ]
         self.orig_env = {}
         for key in self.env_keys:
@@ -216,6 +217,47 @@ class TestAuthConfig(unittest.TestCase):
         self.assertEqual(kwargs["jwt_signing_key"], "custom_jwt_signing_key")
         self.assertIn("client_storage", kwargs)
         self.assertIsInstance(kwargs["client_storage"], FernetEncryptionWrapper)
+
+    def _reload_coordinator_with_oauth(self):
+        os.environ["GOOGLE_ADS_MCP_OAUTH_CLIENT_ID"] = "dummy_client_id"
+        os.environ["GOOGLE_ADS_MCP_OAUTH_CLIENT_SECRET"] = "dummy_client_secret"
+        os.environ["GOOGLE_ADS_MCP_STORAGE_TYPE"] = "memory"
+
+        import importlib
+        import ads_mcp.coordinator as coord
+
+        importlib.reload(coord)
+
+    @patch("fastmcp.server.auth.providers.google.GoogleProvider")
+    def test_coordinator_base_url_falls_back_to_render_external_url(
+        self, mock_provider
+    ):
+        """Tests that Render's external URL is used when no base URL is set."""
+        os.environ["RENDER_EXTERNAL_URL"] = "https://ads-mcp.onrender.com"
+
+        self._reload_coordinator_with_oauth()
+
+        _, kwargs = mock_provider.call_args
+        self.assertEqual(kwargs["base_url"], "https://ads-mcp.onrender.com")
+
+    @patch("fastmcp.server.auth.providers.google.GoogleProvider")
+    def test_coordinator_base_url_prefers_explicit_setting(self, mock_provider):
+        """Tests that an explicit base URL wins over Render's external URL."""
+        os.environ["GOOGLE_ADS_MCP_BASE_URL"] = "https://ads.example.com"
+        os.environ["RENDER_EXTERNAL_URL"] = "https://ads-mcp.onrender.com"
+
+        self._reload_coordinator_with_oauth()
+
+        _, kwargs = mock_provider.call_args
+        self.assertEqual(kwargs["base_url"], "https://ads.example.com")
+
+    @patch("fastmcp.server.auth.providers.google.GoogleProvider")
+    def test_coordinator_base_url_defaults_to_localhost(self, mock_provider):
+        """Tests the localhost default when no base URL source is set."""
+        self._reload_coordinator_with_oauth()
+
+        _, kwargs = mock_provider.call_args
+        self.assertEqual(kwargs["base_url"], "http://localhost:8080")
 
 
 if __name__ == "__main__":

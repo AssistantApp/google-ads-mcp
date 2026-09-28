@@ -29,7 +29,13 @@ from ads_mcp.auth_storage import create_client_storage
 
 _CLIENT_ID = os.environ.get("GOOGLE_ADS_MCP_OAUTH_CLIENT_ID")
 _CLIENT_SECRET = os.environ.get("GOOGLE_ADS_MCP_OAUTH_CLIENT_SECRET")
-_BASE_URL = os.environ.get("GOOGLE_ADS_MCP_BASE_URL", "http://localhost:8080")
+# Render injects RENDER_EXTERNAL_URL at runtime, so deployments there work
+# without knowing the public URL before the first deploy.
+_BASE_URL = (
+    os.environ.get("GOOGLE_ADS_MCP_BASE_URL")
+    or os.environ.get("RENDER_EXTERNAL_URL")
+    or "http://localhost:8080"
+)
 _JWT_SIGNING_KEY = os.environ.get("GOOGLE_ADS_MCP_JWT_SIGNING_KEY")
 
 if _CLIENT_ID and _CLIENT_SECRET:
